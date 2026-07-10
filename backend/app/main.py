@@ -1,7 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.core.config import settings
+from app.schemas.interview import InterviewCreate, InterviewResponse
+from app.schemas.insight import InsightResponse
+from app.services.interview_service import InterviewProcessingService
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -19,6 +23,10 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+class InterviewProcessingResultSchema(BaseModel):
+    interview: InterviewResponse
+    insight: InsightResponse
+
 @app.get("/health", tags=["Health Check"])
 def health_check():
     """
@@ -29,3 +37,25 @@ def health_check():
         "project": settings.PROJECT_NAME,
         "api_version": settings.API_V1_STR
     }
+
+@app.post(
+    f"{settings.API_V1_STR}/interviews",
+    response_model=InterviewProcessingResultSchema,
+    tags=["Interviews"],
+    status_code=201
+)
+async def process_new_interview(payload: InterviewCreate):
+    """
+    Accepts an interview transcript, saves it to Supabase database, triggers
+    AI qualitative insight extraction (with fallback), and returns the results.
+    """
+    try:
+        service = InterviewProcessingService()
+        interview, insight = await service.process_interview(payload)
+        return {
+            "interview": interview,
+            "insight": insight
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process interview: {str(e)}")
+
