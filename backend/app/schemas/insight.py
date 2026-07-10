@@ -7,13 +7,11 @@ from app.schemas.base import BaseSchema
 class KeyQuote(BaseModel):
     quote: str = Field(
         ...,
-        description="The exact verbatim quote from the transcript.",
-        examples=["I really struggle with importing audio files from Zoom."]
+        description="The exact verbatim quote from the transcript."
     )
     context: str = Field(
         ...,
-        description="The surrounding context or question that prompted this quote.",
-        examples=["When asked about the upload workflow issues."]
+        description="The surrounding context or question that prompted this quote."
     )
 
 class InsightExtraction(BaseModel):
@@ -23,18 +21,15 @@ class InsightExtraction(BaseModel):
     """
     pain_points: List[str] = Field(
         default_factory=list,
-        description="Core difficulties, friction points, or frustrations expressed by the user.",
-        examples=[["Struggles with manual transcription", "Hard to find previous notes"]]
+        description="Core difficulties, friction points, or frustrations expressed by the user."
     )
     feature_requests: List[str] = Field(
         default_factory=list,
-        description="Explicit or implicit feature requests or enhancements suggested by the user.",
-        examples=[["Auto-tagging based on themes", "Integration with Slack"]]
+        description="Explicit or implicit feature requests or enhancements suggested by the user."
     )
     positive_feedback: List[str] = Field(
         default_factory=list,
-        description="Specific aspects of their current workflow or tool that the user likes.",
-        examples=[["Fast processing time", "Accurate baseline transcription"]]
+        description="Specific aspects of their current workflow or tool that the user likes."
     )
     key_quotes: List[KeyQuote] = Field(
         default_factory=list,
@@ -42,23 +37,19 @@ class InsightExtraction(BaseModel):
     )
     user_persona: str = Field(
         ...,
-        description="Descriptive name or summary profile of the user based on their role and behavior.",
-        examples=["Lead UX Researcher at a mid-sized SaaS company"]
+        description="Descriptive name or summary profile of the user based on their role and behavior."
     )
     sentiment: str = Field(
         ...,
-        description="Overall sentiment of the user interview (e.g., Positive, Neutral, Negative, Mixed).",
-        examples=["Mixed"]
+        description="Overall sentiment of the user interview (e.g., Positive, Neutral, Negative, Mixed)."
     )
     summary: str = Field(
         ...,
-        description="An executive summary summarizing the interview highlights and key outcomes.",
-        examples=["The user runs 5-10 interviews weekly. They love the speed of the tool but need better tagging options."]
+        description="An executive summary summarizing the interview highlights and key outcomes."
     )
     themes: List[str] = Field(
         default_factory=list,
-        description="General themes or topics associated with this interview.",
-        examples=[["Usability", "Integrations", "Pricing"]]
+        description="General themes or topics associated with this interview."
     )
 
 class InsightCreate(BaseSchema):

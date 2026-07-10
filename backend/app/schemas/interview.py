@@ -7,8 +7,7 @@ from app.schemas.base import BaseSchema
 class InterviewBase(BaseSchema):
     title: str = Field(
         ...,
-        description="The title of the interview session.",
-        examples=["User Interview with John Doe - Product Feedback"]
+        description="The title of the interview session."
     )
     transcript: str = Field(
         ...,
@@ -16,18 +15,15 @@ class InterviewBase(BaseSchema):
     )
     participant_info: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Optional structured metadata about the participant (e.g. email, role, company).",
-        examples=[{"email": "john.doe@example.com", "role": "PM", "company": "Acme Corp"}]
+        description="Optional structured metadata about the participant (e.g. email, role, company)."
     )
     date: Optional[datetime] = Field(
         default=None,
-        description="The date and time when the interview occurred.",
-        examples=["2026-07-10T14:30:00Z"]
+        description="The date and time when the interview occurred."
     )
     metadata: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Any additional custom metadata related to the interview session.",
-        examples=[{"source": "Zoom upload", "duration_seconds": 1800}]
+        description="Any additional custom metadata related to the interview session."
     )
 
 class InterviewCreate(InterviewBase):
