@@ -40,22 +40,22 @@ class InterviewRepository:
         """
         if self.client is None:
             interview = _mock_interviews_db.get(interview_id)
-            if interview and interview.user_id == user_id:
+            if interview and (interview.user_id == user_id or interview.user_id is None):
                 return interview
             return None
 
         try:
-            response = self.client.table("interviews").select("*").eq("id", str(interview_id)).eq("user_id", str(user_id)).execute()
+            response = self.client.table("interviews").select("*").eq("id", str(interview_id)).or_(f"user_id.eq.{user_id},user_id.is.null").execute()
             if not response.data:
                 interview = _mock_interviews_db.get(interview_id)
-                if interview and interview.user_id == user_id:
+                if interview and (interview.user_id == user_id or interview.user_id is None):
                     return interview
                 return None
             return InterviewModel(**response.data[0])
         except Exception as e:
             logger.error(f"Supabase interview select failed: {e}. Checking local in-memory DB.")
             interview = _mock_interviews_db.get(interview_id)
-            if interview and interview.user_id == user_id:
+            if interview and (interview.user_id == user_id or interview.user_id is None):
                 return interview
             return None
 
@@ -70,22 +70,22 @@ class InterviewRepository:
 
         if self.client is None:
             for interview in _mock_interviews_db.values():
-                if interview.transcript.strip() == stripped_t and interview.user_id == user_id:
+                if interview.transcript.strip() == stripped_t and (interview.user_id == user_id or interview.user_id is None):
                     return interview
             return None
 
         try:
-            response = self.client.table("interviews").select("*").eq("transcript", stripped_t).eq("user_id", str(user_id)).execute()
+            response = self.client.table("interviews").select("*").eq("transcript", stripped_t).or_(f"user_id.eq.{user_id},user_id.is.null").execute()
             if not response.data:
                 for interview in _mock_interviews_db.values():
-                    if interview.transcript.strip() == stripped_t and interview.user_id == user_id:
+                    if interview.transcript.strip() == stripped_t and (interview.user_id == user_id or interview.user_id is None):
                         return interview
                 return None
             return InterviewModel(**response.data[0])
         except Exception as e:
             logger.error(f"Supabase query by transcript failed: {e}. Checking local mock DB.")
             for interview in _mock_interviews_db.values():
-                if interview.transcript.strip() == stripped_t and interview.user_id == user_id:
+                if interview.transcript.strip() == stripped_t and (interview.user_id == user_id or interview.user_id is None):
                     return interview
             return None
 
@@ -96,7 +96,7 @@ class InterviewRepository:
         if self.client is None:
             if interview_id in _mock_interviews_db:
                 interview = _mock_interviews_db[interview_id]
-                if interview.user_id == user_id:
+                if interview.user_id == user_id or interview.user_id is None:
                     del _mock_interviews_db[interview_id]
                     # Cascade delete mock insights
                     from app.db.repositories.insight_repository import _mock_insights_db
@@ -107,7 +107,7 @@ class InterviewRepository:
             return False
 
         try:
-            self.client.table("interviews").delete().eq("id", str(interview_id)).eq("user_id", str(user_id)).execute()
+            self.client.table("interviews").delete().eq("id", str(interview_id)).or_(f"user_id.eq.{user_id},user_id.is.null").execute()
             if interview_id in _mock_interviews_db:
                 del _mock_interviews_db[interview_id]
             return True
@@ -115,7 +115,7 @@ class InterviewRepository:
             logger.error(f"Supabase delete interview failed: {e}. Trying local fallback.")
             if interview_id in _mock_interviews_db:
                 interview = _mock_interviews_db[interview_id]
-                if interview.user_id == user_id:
+                if interview.user_id == user_id or interview.user_id is None:
                     del _mock_interviews_db[interview_id]
                     return True
             return False
@@ -137,7 +137,7 @@ class InterviewRepository:
                 "query_embedding": query_embedding,
                 "match_threshold": threshold,
                 "match_count": limit * 2  # Query more to allow filtering by user_id
-            }).eq("user_id", str(user_id)).execute()
+            }).or_(f"user_id.eq.{user_id},user_id.is.null").execute()
             
             # If search returns no DB results, try local in-memory records
             if not response.data:
@@ -151,13 +151,13 @@ class InterviewRepository:
     def _local_search(self, query_embedding: list[float], user_id: UUID, limit: int, threshold: float) -> list[dict]:
         results = []
         for interview in _mock_interviews_db.values():
-            if not interview.embedding or interview.user_id != user_id:
+            if not interview.embedding or (interview.user_id != user_id and interview.user_id is not None):
                 continue
             sim = cosine_similarity(query_embedding, interview.embedding)
             if sim >= threshold:
                 results.append({
                     "id": str(interview.id),
-                    "user_id": str(interview.user_id),
+                    "user_id": str(interview.user_id) if interview.user_id else None,
                     "title": interview.title,
                     "transcript": interview.transcript,
                     "participant_info": interview.participant_info,
@@ -175,20 +175,20 @@ class InterviewRepository:
         Retrieves all interview records belonging to a user, ordered by created_at desc.
         """
         if self.client is None:
-            user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id]
+            user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id or i.user_id is None]
             user_interviews.sort(key=lambda x: x.created_at, reverse=True)
             return user_interviews
 
         try:
-            response = self.client.table("interviews").select("*").eq("user_id", str(user_id)).order("created_at", desc=True).execute()
+            response = self.client.table("interviews").select("*").or_(f"user_id.eq.{user_id},user_id.is.null").order("created_at", desc=True).execute()
             if not response.data:
-                user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id]
+                user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id or i.user_id is None]
                 user_interviews.sort(key=lambda x: x.created_at, reverse=True)
                 return user_interviews
             return [InterviewModel(**item) for item in response.data]
         except Exception as e:
             logger.error(f"Supabase select list interviews failed: {e}. Falling back to mock DB.")
-            user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id]
+            user_interviews = [i for i in _mock_interviews_db.values() if i.user_id == user_id or i.user_id is None]
             user_interviews.sort(key=lambda x: x.created_at, reverse=True)
             return user_interviews
 

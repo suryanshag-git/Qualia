@@ -817,7 +817,15 @@ export default function InterviewsPage({ searchParams }: { searchParams: Promise
                   <div>
                     <h4 className="font-bold mb-1 text-amber-400">Contradicting Evidence Detected</h4>
                     <p>
-                      Our thematic coding engine has flagged conflicting findings in this session. The user appreciates the baseline recording and speed features, but experiences critical delays in tag sorting and Jira exports. Review the grounding quotes below.
+                      Our qualitative coding engine has flagged conflicting user sentiment in this session. The participant expressed positive feedback regarding{" "}
+                      {selectedInterview.insight.positive_feedback && selectedInterview.insight.positive_feedback.length > 0
+                        ? selectedInterview.insight.positive_feedback.slice(0, 2).map(item => item.replace(/\.$/, "")).join(" and ").toLowerCase()
+                        : "certain aspects of their workflow"}
+                      , but also highlighted critical friction points including{" "}
+                      {selectedInterview.insight.pain_points && selectedInterview.insight.pain_points.length > 0
+                        ? selectedInterview.insight.pain_points.slice(0, 2).map(item => item.replace(/\.$/, "")).join(" and ").toLowerCase()
+                        : "key operational bottlenecks"}
+                      . Review the grounding quotes below to evaluate these trade-offs.
                     </p>
                   </div>
                 </div>

@@ -52,7 +52,7 @@ class ThemeClusteringService:
         interviews = []
         if self.interview_repo.client is not None:
             try:
-                response = self.interview_repo.client.table("interviews").select("id, title, user_id").eq("user_id", str(user_id)).execute()
+                response = self.interview_repo.client.table("interviews").select("id, title, user_id").or_(f"user_id.eq.{user_id},user_id.is.null").execute()
                 interviews = response.data or []
             except Exception as e:
                 logger.error(f"Supabase select user interviews failed: {e}")
@@ -60,8 +60,8 @@ class ThemeClusteringService:
         # Merge with mock db to ensure fallbacks are counted
         from app.db.repositories.interview_repository import _mock_interviews_db
         mock_interviews = [
-            {"id": str(k), "title": v.title, "user_id": str(v.user_id)} for k, v in _mock_interviews_db.items()
-            if v.user_id == user_id
+            {"id": str(k), "title": v.title, "user_id": str(v.user_id) if v.user_id else None} for k, v in _mock_interviews_db.items()
+            if v.user_id == user_id or v.user_id is None
         ]
         
         # De-duplicate interviews by ID
