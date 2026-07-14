@@ -141,8 +141,8 @@ export default function Dashboard() {
   }
 
   const totalInterviews = themes.length > 0 
-    ? Math.max(12, ...themes.map(t => t.supporting_interview_ids.length)) 
-    : 12;
+    ? Math.max(0, ...themes.map(t => t.supporting_interview_ids.length)) 
+    : 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 flex flex-col min-h-screen">
