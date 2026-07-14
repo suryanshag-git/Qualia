@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileAudio, Sparkles, Brain, ArrowRight, Quote, Heart, Loader2 } from "lucide-react";
+import { FileAudio, Sparkles, Brain, ArrowRight, Quote, Heart, Loader2, Search, UploadCloud } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<{ token: string; username: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [interviewsCount, setInterviewsCount] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("qualia_user");
@@ -79,70 +80,57 @@ export default function Dashboard() {
       return;
     }
 
-    const fetchThemes = async () => {
+    const fetchDashboardData = async () => {
       setLoading(true);
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       try {
-        const response = await fetch(`${backendUrl}/api/v1/themes`, {
+        const response = await fetch(`${backendUrl}/api/v1/interviews`, {
           headers: {
             "Authorization": `Bearer ${session.token}`
           }
         });
+
         if (response.ok) {
-          const data = await response.json();
-          setThemes(data);
+          const interviews = await response.json();
+          setInterviewsCount(interviews.length);
+
+          if (interviews.length > 0) {
+            const themeResponse = await fetch(`${backendUrl}/api/v1/themes`, {
+              headers: {
+                "Authorization": `Bearer ${session.token}`
+              }
+            });
+            if (themeResponse.ok) {
+              const themesData = await themeResponse.json();
+              setThemes(themesData);
+            }
+          }
         } else {
           throw new Error("Response not ok");
         }
       } catch (e) {
-        console.error("Failed to fetch themes:", e);
-        setThemes([
-          {
-            name: "Synthesis Bottlenecks",
-            frequency: 8,
-            representative_quote: "Finding the exact moments where users struggled with a specific feature is like finding a needle in a haystack.",
-            supporting_interview_ids: []
-          },
-          {
-            name: "Discovery Workflows",
-            frequency: 6,
-            representative_quote: "Zoom recordings are solid, but manual transcript tags coding is tedious.",
-            supporting_interview_ids: []
-          },
-          {
-            name: "Jira Integration",
-            frequency: 5,
-            representative_quote: "I spend hours pushing bug tickets to engineering trackers manually.",
-            supporting_interview_ids: []
-          },
-          {
-            name: "Thematic Tagging",
-            frequency: 4,
-            representative_quote: "I wish tag recommendations were conceptually automated.",
-            supporting_interview_ids: []
-          }
-        ]);
+        console.error("Failed to fetch dashboard data:", e);
+        setInterviewsCount(0);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchThemes();
+    fetchDashboardData();
   }, [session, authChecked]);
 
   const handleLogout = () => {
     localStorage.removeItem("qualia_user");
     setSession(null);
     setThemes([]);
+    setInterviewsCount(null);
   };
 
   if (authChecked && !session) {
     return <AuthOverlay onAuthSuccess={(token, username) => setSession({ token, username })} />;
   }
 
-  const totalInterviews = themes.length > 0 
-    ? Math.max(0, ...themes.map(t => t.supporting_interview_ids.length)) 
-    : 0;
+  const totalInterviews = interviewsCount ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 flex flex-col min-h-screen">
@@ -164,7 +152,90 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 space-y-12">
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-20 text-gray-500">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Loading Dashboard...</p>
+        </div>
+      ) : interviewsCount === 0 ? (
+        <div className="flex-1 space-y-12">
+          {/* Smart Empty State Container */}
+          <div className="relative overflow-hidden rounded-2xl bg-[#0f172a]/60 border border-[#1f2937] p-8 lg:p-16 shadow-2xl text-center space-y-8 backdrop-blur-xl">
+            <div className="absolute right-0 top-0 -mt-12 -mr-12 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute left-0 bottom-0 -mb-12 -ml-12 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="relative z-10 space-y-5 max-w-2xl mx-auto">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                Welcome, {session?.username}!
+              </span>
+              <h2 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                Ready to synthesize your first interview?
+              </h2>
+              <p className="text-gray-400 text-sm lg:text-base leading-relaxed max-w-lg mx-auto font-medium">
+                Qualia is an evidence-backed qualitative analysis tool. Upload transcripts to automatically generate theme tags, verify user pain points, and extract grounded product feature requests.
+              </p>
+              <div className="pt-4">
+                <Link href="/interviews">
+                  <Button size="lg" className="gap-2 px-8 py-6 text-sm font-bold bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-xl shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all duration-300">
+                    <UploadCloud className="w-4 h-4" />
+                    Upload Your First Transcript
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Benefit Highlights */}
+          <div className="space-y-6 pt-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 text-center">Core Qualia Capabilities</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="bg-[#111827]/40 border-[#1f2937]">
+                <CardHeader className="space-y-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Quote className="w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-sm font-extrabold text-white">Absolute Quote Grounding</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                    Every qualitative synthesis maps directly to verifiable quotes in the transcript. Eliminates AI hallucinations to keep your product discovery trustworthy.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#111827]/40 border-[#1f2937]">
+                <CardHeader className="space-y-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Search className="w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-sm font-extrabold text-white">pgvector Semantic Search</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                    Search customer conversations semantically using dense vector embeddings. Retrieve matching interviews and quote highlights instantly.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#111827]/40 border-[#1f2937]">
+                <CardHeader className="space-y-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-sm font-extrabold text-white">Thematic Coding Clusters</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                    Cluster customer issues automatically. Identify top trends, frequency metrics, and representative feedback quotes across all sessions.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-12">
         {/* Header Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e1b4b] via-[#0f172a] to-[#0b0f19] border border-[#1e293b] p-8 lg:p-12 shadow-2xl">
           <div className="absolute right-0 top-0 -mt-12 -mr-12 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
@@ -349,6 +420,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+    )}
 
       {/* Footer Notice */}
       <footer className="border-t border-[#1f2937] pt-6 pb-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500 font-semibold mt-12 shrink-0">
