@@ -15,6 +15,7 @@ class InterviewModel(BaseModel):
     date: Optional[datetime] = Field(default=None, description="The date the interview took place.")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Custom dictionary for any external platform metadata.")
     embedding: Optional[List[float]] = Field(default=None, description="768-dimensional document vector embedding for semantic search.")
+    user_id: Optional[UUID] = Field(default=None, description="The ID of the user who owns this interview.")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp of when the database record was created."

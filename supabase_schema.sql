@@ -1,6 +1,13 @@
 -- Enable the pgvector extension to work with embeddings
 create extension if not exists vector;
 
+-- Create the users table
+create table if not exists public.users (
+    id uuid primary key default gen_random_uuid(),
+    username text unique not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Create the interviews table
 create table if not exists public.interviews (
     id uuid primary key,
@@ -11,7 +18,8 @@ create table if not exists public.interviews (
     metadata jsonb,
     embedding vector(768),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    user_id uuid references public.users(id) on delete cascade
 );
 
 -- Create the insights table
@@ -24,19 +32,23 @@ create table if not exists public.insights (
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Disable Row Level Security (RLS) or enable it with open policies for simple client access
+-- Enable Row Level Security (RLS)
+alter table public.users enable row level security;
 alter table public.interviews enable row level security;
 alter table public.insights enable row level security;
 
--- Create public read/write access policies for testing/demo purposes
+-- Create public access policies for users
+create policy "Allow public insert to users" on public.users for insert with check (true);
+create policy "Allow public select from users" on public.users for select using (true);
+
+-- Create access policies for interviews (Restricted: select/insert/delete only, no update)
 create policy "Allow public read access to interviews" on public.interviews for select using (true);
 create policy "Allow public insert access to interviews" on public.interviews for insert with check (true);
-create policy "Allow public update access to interviews" on public.interviews for update using (true);
 create policy "Allow public delete access to interviews" on public.interviews for delete using (true);
 
+-- Create access policies for insights (Restricted: select/insert/delete only, no update)
 create policy "Allow public read access to insights" on public.insights for select using (true);
 create policy "Allow public insert access to insights" on public.insights for insert with check (true);
-create policy "Allow public update access to insights" on public.insights for update using (true);
 create policy "Allow public delete access to insights" on public.insights for delete using (true);
 
 -- Create the semantic similarity search function (RPC) used by the repository

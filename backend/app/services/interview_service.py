@@ -25,7 +25,7 @@ class InterviewProcessingService:
         self.insight_repo = insight_repo or InsightRepository()
         self.extractor = extractor or TranscriptExtractor()
 
-    async def process_interview(self, payload: InterviewCreate) -> tuple[InterviewModel, InsightModel]:
+    async def process_interview(self, payload: InterviewCreate, user_id: UUID) -> tuple[InterviewModel, InsightModel]:
         """
         Coordinates the workflow of:
         1. Checking for duplicate transcript contents.
@@ -34,7 +34,7 @@ class InterviewProcessingService:
         4. Creating and saving the insight record linked to the interview.
         """
         # Check for duplicate transcript content to avoid redundant Gemini calls
-        existing_interview = await self.interview_repo.get_by_transcript(payload.transcript)
+        existing_interview = await self.interview_repo.get_by_transcript(payload.transcript, user_id)
         if existing_interview:
             logger.info(f"Duplicate transcript detected. Reusing existing interview {existing_interview.id}...")
             existing_insight = await self.insight_repo.get_by_interview_id(existing_interview.id)
@@ -58,6 +58,7 @@ class InterviewProcessingService:
         # Create database record model for the Interview
         interview_model = InterviewModel(
             id=interview_id,
+            user_id=user_id,
             title=payload.title,
             transcript=payload.transcript,
             participant_info=payload.participant_info,
@@ -135,7 +136,7 @@ class InterviewProcessingService:
         # Invalidate theme clustering cache on new interview creations
         try:
             from app.ai.clustering import clear_themes_cache
-            clear_themes_cache()
+            clear_themes_cache(user_id)
         except Exception as e:
             logger.warning(f"Failed to clear theme cache: {e}")
 

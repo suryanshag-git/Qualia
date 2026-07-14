@@ -49,5 +49,6 @@ class InterviewResponse(InterviewBase):
     Schema returning the interview details from the database, including system fields.
     """
     id: UUID = Field(..., description="Unique database ID of the interview.")
+    user_id: Optional[UUID] = Field(None, description="The ID of the user who owns this interview.")
     created_at: datetime = Field(..., description="Timestamp of when the interview record was created.")
     updated_at: datetime = Field(..., description="Timestamp of when the interview record was last updated.")

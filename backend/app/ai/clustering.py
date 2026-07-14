@@ -13,51 +13,55 @@ class ClusteredTheme(BaseModel):
     representative_quote: str
     supporting_interview_ids: List[UUID]
 
-# Module-level in-memory cache for clustered themes
-_cached_themes: Optional[List[ClusteredTheme]] = None
+# Module-level in-memory cache for clustered themes: user_id -> List[ClusteredTheme]
+_cached_themes: Dict[UUID, List[ClusteredTheme]] = {}
 
-def clear_themes_cache() -> None:
+def clear_themes_cache(user_id: Optional[UUID] = None) -> None:
     """
     Clears the cached theme clusters. 
     Called when a new interview is successfully processed to trigger recalculation.
     """
     global _cached_themes
-    logger.info("Invalidating theme clustering cache.")
-    _cached_themes = None
+    if user_id:
+        logger.info(f"Invalidating theme clustering cache for user: {user_id}")
+        if user_id in _cached_themes:
+            del _cached_themes[user_id]
+    else:
+        logger.info("Invalidating all theme clustering caches.")
+        _cached_themes = {}
 
 class ThemeClusteringService:
     def __init__(self) -> None:
         self.interview_repo = InterviewRepository()
         self.insight_repo = InsightRepository()
 
-    async def get_clustered_themes(self) -> List[ClusteredTheme]:
+    async def get_clustered_themes(self, user_id: UUID) -> List[ClusteredTheme]:
         """
-        Retrieves top themes clustered across all interviews.
+        Retrieves top themes clustered across user's interviews.
         Uses in-memory cache if available.
         Falls back to default mock theme cards if database is empty.
         """
         global _cached_themes
-        if _cached_themes is not None:
-            logger.info("Returning cached theme clusters.")
-            return _cached_themes
+        if user_id in _cached_themes:
+            logger.info(f"Returning cached theme clusters for user: {user_id}")
+            return _cached_themes[user_id]
 
-        logger.info("Recalculating theme clusters...")
+        logger.info(f"Recalculating theme clusters for user: {user_id}...")
         
-        # 1. Fetch all interviews
-        # Since we don't have a direct list_all in the repo, we can fetch all from mock db,
-        # or if Supabase is active, query the table. Let's do both.
+        # 1. Fetch interviews belonging to this user
         interviews = []
         if self.interview_repo.client is not None:
             try:
-                response = self.interview_repo.client.table("interviews").select("id, title").execute()
+                response = self.interview_repo.client.table("interviews").select("id, title, user_id").eq("user_id", str(user_id)).execute()
                 interviews = response.data or []
             except Exception as e:
-                logger.error(f"Supabase select all interviews failed: {e}")
+                logger.error(f"Supabase select user interviews failed: {e}")
         
         # Merge with mock db to ensure fallbacks are counted
         from app.db.repositories.interview_repository import _mock_interviews_db
         mock_interviews = [
-            {"id": str(k), "title": v.title} for k, v in _mock_interviews_db.items()
+            {"id": str(k), "title": v.title, "user_id": str(v.user_id)} for k, v in _mock_interviews_db.items()
+            if v.user_id == user_id
         ]
         
         # De-duplicate interviews by ID
@@ -69,9 +73,9 @@ class ThemeClusteringService:
                 all_interviews.append(i)
 
         if not all_interviews:
-            logger.info("No interviews found. Returning default benchmark mock themes.")
+            logger.info(f"No interviews found for user {user_id}. Returning default benchmark mock themes.")
             # Default mock themes for initial empty state display
-            _cached_themes = [
+            mock_defaults = [
                 ClusteredTheme(
                     name="Synthesis Bottlenecks",
                     frequency=8,
@@ -97,7 +101,7 @@ class ThemeClusteringService:
                     supporting_interview_ids=[]
                 )
             ]
-            return _cached_themes
+            return mock_defaults
 
         # 2. Map themes conceptually
         theme_groups: Dict[str, List[UUID]] = {}
@@ -142,5 +146,5 @@ class ThemeClusteringService:
 
         # Sort themes by frequency descending
         clustered_themes.sort(key=lambda x: x.frequency, reverse=True)
-        _cached_themes = clustered_themes
-        return _cached_themes
+        _cached_themes[user_id] = clustered_themes
+        return clustered_themes
