@@ -1,33 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileAudio, Sparkles, Brain, Search } from "lucide-react";
-import SearchModal from "./SearchModal";
+import { LayoutDashboard, FileAudio, Sparkles, Brain } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  // Shortcut keypress: '/' triggers search modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === "INPUT" ||
-        document.activeElement?.tagName === "TEXTAREA"
-      ) {
-        return;
-      }
-      if (e.key === "/") {
-        e.preventDefault();
-        setIsSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const links = [
     {
@@ -59,23 +37,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Conceptual Search Button */}
-      <div className="px-4 pt-4">
-        <button
-          onClick={() => setIsSearchOpen(true)}
-          className="w-full flex items-center justify-between px-3 py-2 bg-[#0b0f19] border border-[#1e293b] hover:border-indigo-500/50 rounded-xl text-left text-xs text-gray-500 hover:text-gray-300 transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-gray-500" />
-            <span>Search concepts...</span>
-          </div>
-          <span className="text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded text-gray-400 font-mono">/</span>
-        </button>
-      </div>
-
       {/* Navigation Links */}
       <nav className="flex-1 px-4 py-4 space-y-1">
-
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = pathname === link.href;
@@ -101,7 +64,6 @@ export default function Sidebar() {
         <Sparkles className="w-4 h-4 text-indigo-400" />
         <span className="text-xs text-gray-500">Evidence-Backed Synthesis</span>
       </div>
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </aside>
   );
 }

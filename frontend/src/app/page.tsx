@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [session, setSession] = useState<{ token: string; username: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [interviewsCount, setInterviewsCount] = useState<number | null>(null);
+  const [interviews, setInterviews] = useState<any[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem("qualia_user");
@@ -91,10 +92,11 @@ export default function Dashboard() {
         });
 
         if (response.ok) {
-          const interviews = await response.json();
-          setInterviewsCount(interviews.length);
+          const interviewsData = await response.json();
+          setInterviews(interviewsData);
+          setInterviewsCount(interviewsData.length);
 
-          if (interviews.length > 0) {
+          if (interviewsData.length > 0) {
             const themeResponse = await fetch(`${backendUrl}/api/v1/themes`, {
               headers: {
                 "Authorization": `Bearer ${session.token}`
@@ -129,6 +131,45 @@ export default function Dashboard() {
   if (authChecked && !session) {
     return <AuthOverlay onAuthSuccess={(token, username) => setSession({ token, username })} />;
   }
+
+  const calculateSentimentMetrics = () => {
+    if (!interviews || interviews.length === 0) {
+      return {
+        label: "Neutral",
+        score: 50,
+        badgeVariant: "warning" as const,
+        description: "No interview data uploaded yet."
+      };
+    }
+
+    let totalScore = 0;
+    interviews.forEach(item => {
+      const sentiment = item.insight?.data?.sentiment || item.insight?.sentiment || "Neutral";
+      if (sentiment === "Positive") totalScore += 100;
+      else if (sentiment === "Mixed" || sentiment === "Neutral") totalScore += 50;
+      else if (sentiment === "Negative") totalScore += 0;
+    });
+
+    const score = Math.round(totalScore / interviews.length);
+    
+    let label = "Mixed";
+    let badgeVariant: "warning" | "success" | "destructive" | "secondary" = "warning";
+    let description = `${score}% mixed or neutral sentiment baseline`;
+
+    if (score >= 75) {
+      label = "Positive";
+      badgeVariant = "success" as const;
+      description = `${score}% highly positive customer sentiment`;
+    } else if (score < 45) {
+      label = "Negative";
+      badgeVariant = "destructive" as const;
+      description = `${score}% user friction and negative sentiment`;
+    }
+
+    return { label, score, badgeVariant, description };
+  };
+
+  const sentimentMetrics = calculateSentimentMetrics();
 
   const totalInterviews = interviewsCount ?? 0;
 
@@ -299,14 +340,23 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-3xl font-bold tracking-tight">Mixed</span>
-                    <Badge variant="warning">Neutral Baseline</Badge>
+                    <span className="text-3xl font-bold tracking-tight">{sentimentMetrics.label}</span>
+                    <Badge variant={sentimentMetrics.badgeVariant}>{sentimentMetrics.label} Sentiment</Badge>
                   </div>
                   {/* Progress bar */}
                   <div className="w-full bg-[#1f2937] rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: "65%" }}></div>
+                    <div 
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        sentimentMetrics.score >= 75 
+                          ? "bg-emerald-500" 
+                          : sentimentMetrics.score < 45 
+                          ? "bg-red-500" 
+                          : "bg-amber-500"
+                      }`}
+                      style={{ width: `${Math.max(5, sentimentMetrics.score)}%` }}
+                    ></div>
                   </div>
-                  <p className="text-[10px] text-gray-500 font-medium">65% of sessions contain conflicting feedback</p>
+                  <p className="text-[10px] text-gray-500 font-medium">{sentimentMetrics.description}</p>
                 </CardContent>
               </Card>
 
