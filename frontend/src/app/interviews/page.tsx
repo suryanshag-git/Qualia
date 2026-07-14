@@ -800,12 +800,6 @@ export default function InterviewsPage({ searchParams }: { searchParams: Promise
                       {selectedInterview.insight.sentiment}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">AI Confidence:</span>
-                    <span className="text-xs font-extrabold text-indigo-400">
-                      {Math.floor((selectedInterview.title.charCodeAt(0) % 7) + 92)}%
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
