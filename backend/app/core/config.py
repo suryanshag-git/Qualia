@@ -8,7 +8,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # CORS Origins - supports comma-separated list or JSON array string
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "https://run-autosight.vercel.app",
+        "https://run-myapp.vercel.app"
+    ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
