@@ -1,5 +1,5 @@
 import logging
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime, timezone
 from app.schemas.interview import InterviewCreate
 from app.schemas.insight import InsightExtraction
