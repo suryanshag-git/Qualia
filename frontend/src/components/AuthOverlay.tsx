@@ -96,7 +96,7 @@ export default function AuthOverlay({ onAuthSuccess }: AuthOverlayProps) {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_\-]/g, ""))}
-                placeholder="e.g. researcher_surya"
+                placeholder="e.g. John Doe"
                 disabled={loading}
                 className="w-full bg-[#0b0f19] border border-[#1f2937] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#6366f1] transition-all"
               />
